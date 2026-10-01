@@ -101,6 +101,8 @@ OAuth 回调临时使用 http://localhost:1455/auth/callback，监听只绑定 1
 
 README 截图使用虚拟 Plus / Pro 账号和模拟额度；Pro 示例展示接口只返回周额度时的布局，实际窗口以接口响应为准。
 
+首页内存数字来自 Windows 上三个 Plus 账号的后台进程工作集测量，本次空闲采样约 53.6 MB，页面展示取约 55 MB；不含浏览器，不代表刷新峰值或其他设备的固定占用。
+
 以账号接口实际响应为准，不根据套餐名虚构额度。只返回周窗口时只显示一周；字段缺失显示未知，不能据此推断无限额度。Pro 显示已通过模拟数据验证，真实 Pro 账号查询仍待验证。套餐续费日期和切换指定浏览器账号的 ChatGPT 入口尚未提供。
 
 这是非官方工具。OAuth 和 usage 使用 Codex 客户端兼容参数及非公开接口，未来可能变化或停止工作。适配集中在 openai.js；代理读取集中在 proxy.js。授权失效显示“需要重新登录”，其他查询错误分别处理；401 按允许的续期时间重试一次，429 遵守 Retry-After。
@@ -112,7 +114,7 @@ npm run check
 npm test
 ```
 
-测试使用临时目录、假账号和独立端口，不读取用户真实授权。Windows 本地完整测试为 37 项通过、2 项原生 macOS 检查跳过；模拟 macOS 服务分支的 8 项集成检查通过。macOS 启动控制通过模拟 launchctl 验证，不能代替 Finder、系统代理和登录后自启动的真机验证。
+测试使用临时目录、假账号和独立端口，不读取用户真实授权。Windows 本地完整测试为 43 项通过、2 项原生 macOS 检查跳过；模拟 macOS 服务分支的 10 项集成检查通过。macOS 启动控制通过模拟 launchctl 验证，不能代替 Finder、系统代理和登录后自启动的真机验证。
 
 .github/workflows/test.yml 配置 Windows、macOS Apple Silicon 和 Intel 检查，包含真实 scutil、plutil、POSIX 文件权限和 LaunchAgent 启停测试。没有 GUI 登录域时仅跳过 LaunchAgent 原生生命周期测试。已在真正的 GitHub Mac 运行环境验证：Apple Silicon 与 Intel 均为 39 项通过、0 项跳过；Windows 检查也通过。[查看原生跨平台检查结果](https://github.com/neystan/codex-quota-monitor/actions/runs/36821805810)。CI 不进行真实账号登录，也不能代替 Finder 双击及用户真正退出系统后再登录的操作验证。
 
