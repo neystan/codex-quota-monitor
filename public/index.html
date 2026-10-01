@@ -18,6 +18,7 @@ button{font:inherit;display:inline-flex;align-items:center;justify-content:cente
 .notice,.login-status{padding:12px 16px;border:1px solid #ffffffb3;border-radius:16px;margin-bottom:17px;font-size:12px;background:#eaf1fd;color:#6281a9;animation:reveal .32s var(--ease) both}.notice.error{background:#fff0ec;color:#b37868}.login-status{display:flex;align-items:center;justify-content:space-between;gap:12px}.login-status small{display:block;font-size:10px;color:#8a9ab0;margin-top:4px}.login-status button{min-height:32px;padding:6px 12px;font-size:11px}.notice[hidden],.login-status[hidden]{display:none}
 .settings{margin-top:20px;padding:4px 3px;animation:reveal .65s var(--ease) .2s both}.settings summary{display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;list-style:none;font-size:12px;color:#8b94a3}.settings summary::-webkit-details-marker{display:none}.settings-title{display:inline-flex;align-items:center;gap:7px}.chevron{width:12px;height:12px;color:#aab0bb;transition:transform .25s var(--ease)}.settings[open] .chevron{transform:rotate(90deg)}#proxy-current{font:11px "SFMono-Regular",Consolas,monospace;color:#b1b5be;overflow-wrap:anywhere}.settings p{font-size:10px;color:#a5aab5;margin-top:10px;line-height:1.7}
 .is-loading .refresh-icon{animation:spin .9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@keyframes reveal{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}@keyframes card-in{from{opacity:0;transform:translateY(16px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+.card-foot{flex-wrap:wrap;gap:7px}.updated{margin-right:auto}.reward-badge{display:inline-flex;align-items:center;gap:4px;color:#6989b5;font-size:10px}.reward-badge.zero{color:#a0a8b6}.reward-badge strong{font-weight:600;font-variant-numeric:tabular-nums}.details-toggle{gap:3px;min-height:24px;padding:2px 4px;font-size:10px;color:#7f8c9f}.details-toggle .icon{width:10px;height:10px;transition:transform .25s var(--ease)}.details-toggle[aria-expanded="true"] .icon{transform:rotate(90deg)}.account-details{margin-top:13px;padding-top:15px;border-top:1px solid var(--line);animation:reveal .3s var(--ease) both}.account-details[hidden]{display:none}.detail-section+.detail-section{margin-top:17px;padding-top:15px;border-top:1px solid var(--line)}.detail-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;color:#636d7c;font-size:11px;font-weight:550}.detail-heading small{font-size:9px;font-weight:400;color:#a0a8b5}.reward-row{padding:9px 10px;border-radius:10px;background:#f6f8fb}.reward-row+.reward-row{margin-top:6px}.reward-title{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#737f90;font-size:11px}.reward-title span:first-child{min-width:0;overflow-wrap:anywhere}.reward-status{font-size:9px;color:#6b9c81;white-space:nowrap}.reward-date{margin-top:4px;font-size:10px;color:#a0a8b5}.activity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px}.activity-metric{min-width:0}.metric-label{display:block;font-size:10px;color:#9aa3b0}.metric-value{display:block;margin-top:3px;font-size:17px;line-height:1.3;font-weight:550;letter-spacing:-.35px;font-variant-numeric:tabular-nums;color:#58677d}.activity-secondary{margin-top:11px;font-size:10px;line-height:1.8;color:#98a2b1}.activity-chart{margin-top:15px}.chart-heading,.chart-axis{display:flex;justify-content:space-between;gap:8px;color:#a0a8b5;font-size:9px}.activity-bars{display:flex;align-items:flex-end;gap:4px;height:48px;margin:7px 0 5px}.activity-bar{flex:1;height:var(--height);min-width:0;border-radius:3px 3px 1px 1px;background:linear-gradient(#86ace3,#c0d2ed);transition:opacity .2s}.activity-bar:hover{opacity:.65}.activity-bar.missing{background:#e8ecf2}.detail-message{font-size:11px;line-height:1.7;color:#a0a8b5}.detail-message.error{margin-bottom:8px;color:#b07d3a}.detail-retry{font-size:10px;min-height:24px;padding:2px 6px;margin-left:auto}.details-loading{display:flex;align-items:center;gap:6px;font-size:11px;color:#94a1b5}.details-loading .icon{width:12px;height:12px;animation:spin 1s linear infinite}
 .drag-handle{cursor:grab;padding:3px;min-width:18px;width:18px;color:#a5aebb;flex-shrink:0;touch-action:none;user-select:none}.drag-handle:active,.account-head:active{cursor:grabbing}.account-head{cursor:grab;touch-action:none}.identity{flex:1}.card.dragging{position:fixed;z-index:10;pointer-events:none;transform:scale(1.018);border-color:#dce8fc;box-shadow:0 20px 54px #253c632b;will-change:translate,transform}.drag-slot{position:relative;flex:0 0 calc((100% - 36px)/3);border:1px dashed #85ade979;border-radius:24px;background:#e7effc45;box-shadow:inset 0 0 0 4px #ffffff5e}#accounts{--columns:3;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:18px;position:relative;overflow-anchor:none}#accounts.sorting .card:not(.dragging){transform:none}.empty{width:100%}body.card-sorting{user-select:none;cursor:grabbing}
 @media(hover:hover){#accounts:not(.sorting) .card:not(.entering):not(.dragging):hover{transform:translateY(-2px);border-color:#eef2fb;box-shadow:0 3px 5px #25283903,0 12px 30px #25283908}}
 @media(max-width:1100px){#accounts{--columns:2}.card,.drag-slot{flex-basis:calc((100% - 18px)/2)}.shell{padding:26px 24px}.card{padding:21px 20px 17px}}
@@ -45,18 +46,93 @@ button{font:inherit;display:inline-flex;align-items:center;justify-content:cente
 <div id="accounts"><div class="empty"><strong>正在读取账号…</strong></div></div>
 <details class="settings"><summary><span class="settings-title"><svg class="icon chevron" aria-hidden="true"><use href="#i-chevron"/></svg>连接状态</span><span id="proxy-current"></span></summary><p id="proxy-status"></p></details>
 </main>
-<template id="account-template"><article class="card"><div class="account-head"><div class="avatar" aria-hidden="true"></div><div class="identity"><div class="email"></div><div class="account-meta"><span class="plan"></span><span class="state"></span></div></div><div class="account-actions"><button class="quiet relogin" aria-label="重新登录" title="重新登录"><svg class="icon" aria-hidden="true"><use href="#i-login"/></svg></button><button class="quiet danger remove" aria-label="移除账号" title="移除"><svg class="icon" aria-hidden="true"><use href="#i-remove"/></svg></button></div></div><div class="quotas"></div><p class="account-error" hidden></p><div class="card-foot" title="上次成功获取额度的时间"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><span class="updated"></span></div></article></template>
+<template id="account-template"><article class="card"><div class="account-head"><div class="avatar" aria-hidden="true"></div><div class="identity"><div class="email"></div><div class="account-meta"><span class="plan"></span><span class="state"></span></div></div><div class="account-actions"><button class="quiet relogin" aria-label="重新登录" title="重新登录"><svg class="icon" aria-hidden="true"><use href="#i-login"/></svg></button><button class="quiet danger remove" aria-label="移除账号" title="移除"><svg class="icon" aria-hidden="true"><use href="#i-remove"/></svg></button></div></div><div class="quotas"></div><p class="account-error" hidden></p><div class="card-foot"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><span class="updated" title="上次成功获取额度的时间"></span><span class="reward-badge" title="可用的额度重置奖励"><span>重置奖励</span><strong>—</strong></span><button class="quiet details-toggle" aria-expanded="false">详情<svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></button></div><section class="account-details" hidden aria-label="奖励与使用活动"></section></article></template>
 <template id="quota-template"><div class="quota"><div class="quota-label"><span class="quota-title"></span><span class="numbers"><span class="remaining-label">剩余</span><span class="remaining"></span><span class="percent">%</span></span></div><div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="fill"></div></div><div class="countdown"></div><div class="reset-date" title="重置时间"></div></div></template>
 <script>
-const $=selector=>document.querySelector(selector),cards=new Map();
+const $=selector=>document.querySelector(selector),cards=new Map(),detailViews=new Map();
 let state=null,working=false,activeAction='',noticeSeen=0,pollTimer,tickTimer,draggedId=null;
 let dragPointer=null,dragX=0,dragY=0,dragStartX=0,dragStartY=0,dragMoved=false,dragScrollTimer,dragSlot=null,pendingPositions=null;
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const dateFormat=new Intl.DateTimeFormat('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+const dayFormat=new Intl.DateTimeFormat('zh-CN',{month:'numeric',day:'numeric',timeZone:'UTC'});
+const compactFormat=new Intl.NumberFormat('zh-CN',{notation:'compact',maximumFractionDigits:1});
 const statuses={ok:'正常',waiting:'等待更新',refreshing:'正在更新',error:'查询失败',needs_login:'需要重新登录'};
 function date(value){return value?dateFormat.format(value):'未知';}
 function showNotice(text,error=false){$('#notice').textContent=text;$('#notice').className='notice'+(error?' error':'');$('#notice').hidden=!text;}
 function period(minutes){if(!minutes)return '';if(minutes%10080===0)return `${minutes/10080} 周`;if(minutes%1440===0)return `${minutes/1440} 天`;if(minutes%60===0)return `${minutes/60} 小时`;return `${minutes} 分钟`;}
+function element(tag,className,text){const node=document.createElement(tag);node.className=className;if(text!=null)node.textContent=text;return node;}
+function duration(seconds){if(seconds==null)return '—';const minutes=Math.floor(seconds/60);return minutes>=60?`${Math.floor(minutes/60)}小时${minutes%60}分`:minutes?`${minutes}分`:`${Math.round(seconds)}秒`;}
+function metric(label,value,compact=false,unit=''){
+  const node=element('div','activity-metric');node.append(element('span','metric-label',label));
+  const text=value==null?'—':typeof value==='number'?(compact?compactFormat.format(value):value.toLocaleString('zh-CN'))+unit:value;
+  const number=element('span','metric-value',text);if(typeof value==='number')number.title=value.toLocaleString('zh-CN')+unit;node.append(number);return node;
+}
+function activityChart(daily){
+  if(!daily?.length)return null;
+  const chart=element('div','activity-chart'),heading=element('div','chart-heading','每日 Token'),bars=element('div','activity-bars');
+  bars.setAttribute('role','group');bars.setAttribute('aria-label','最近每日 Token 用量');
+  const last=new Date(daily.at(-1).date+'T00:00:00Z'),rows=new Map(daily.map(row=>[row.date,row.tokens]));
+  const start=new Date(last);start.setUTCDate(last.getUTCDate()-13);
+  const max=Math.max(1,...daily.filter(row=>row.date>=start.toISOString().slice(0,10)).map(row=>row.tokens));
+  for(let index=0;index<14;index++){
+    const day=new Date(start);day.setUTCDate(start.getUTCDate()+index);const key=day.toISOString().slice(0,10),tokens=rows.get(key);
+    const bar=element('div','activity-bar'+(tokens==null?' missing':''));bar.style.setProperty('--height',tokens==null?'2px':Math.max(2,tokens/max*48)+'px');
+    bar.title=key+' · '+(tokens==null?'未提供数据':tokens.toLocaleString('zh-CN')+' Token');bar.setAttribute('role','img');bar.setAttribute('aria-label',bar.title);bars.append(bar);
+  }
+  const axis=element('div','chart-axis');axis.append(element('span','',dayFormat.format(start)),element('span','',dayFormat.format(last)));
+  chart.append(heading,bars,axis);return chart;
+}
+function renderDetails(id){
+  const card=cards.get(id),view=detailViews.get(id);if(!card||!view)return;
+  const panel=card.querySelector('.account-details');panel.hidden=!view.open;
+  const toggle=card.querySelector('.details-toggle');toggle.setAttribute('aria-expanded',String(view.open));
+  if(!view.open)return;
+  panel.replaceChildren();
+  if(view.loading&&!view.data){panel.append(element('p','details-loading','正在读取奖励与活动…'));return;}
+  if(view.error){panel.append(element('p','detail-message error',view.error));}
+  const data=view.data;
+  if(data)for(const [key,title] of [['rewards','重置奖励'],['activity','使用活动']]){
+    const result=data[key],section=element('div','detail-section'),heading=element('div','detail-heading');
+    heading.append(element('span','',title));
+    if(key==='activity'&&result?.data?.statsAsOf)heading.append(element('small','',`统计截至 ${dayFormat.format(result.data.statsAsOf)}`));
+    section.append(heading);
+    if(result?.error)section.append(element('p','detail-message error',(result.data?'缓存 · ':'')+result.error));
+    if(key==='rewards'&&result?.data){
+      const rewards=result.data;
+      if(rewards.credits?.length)for(const credit of rewards.credits){
+        const row=element('div','reward-row'),line=element('div','reward-title');
+        line.append(element('span','',credit.title||'额度重置奖励'),element('span','reward-status',credit.supportedByPlan===false?'套餐不支持':({available:'可用',redeeming:'兑换中',redeemed:'已使用'})[credit.status]||'状态未知'));
+        const expiry=credit.expiresAt?date(credit.expiresAt)+' 到期':credit.expiresKnown?'无到期限制':'有效期未提供';
+        const when=element('div','reward-date',expiry);when.title=(credit.grantedAt?'发放于 '+date(credit.grantedAt)+'。':'')+(credit.description||'');
+        row.append(line,when);section.append(row);
+      }else section.append(element('p','detail-message',rewards.availableCount===0?'暂无可用奖励':rewards.availableCount==null?'奖励明细未提供':`${rewards.availableCount} 次可用 · 暂无明细`));
+    }else if(key==='activity'&&result?.data){
+      const activity=result.data,grid=element('div','activity-grid');
+      grid.append(metric('累计 Token',activity.lifetimeTokens,true),metric('单日最高 Token',activity.peakDailyTokens,true),
+        metric('当前连续使用',activity.currentStreakDays,false,' 天'),metric('最长连续使用',activity.longestStreakDays,false,' 天'),
+        metric('最长单次任务',duration(activity.longestRunningTurnSec)),metric('会话总数',activity.totalThreads));
+      section.append(grid);
+      const extras=[];
+      if(activity.fastModePercent!=null)extras.push(`快速模式 ${activity.fastModePercent.toFixed(1)}%`);
+      if(activity.totalSkillsUsed!=null)extras.push(`技能调用 ${activity.totalSkillsUsed.toLocaleString('zh-CN')} 次${activity.uniqueSkillsUsed!=null?' · '+activity.uniqueSkillsUsed+' 种':''}`);
+      if(activity.reasoningEffort)extras.push(`推理偏好 ${activity.reasoningEffort}${activity.reasoningEffortPercent!=null?' · '+activity.reasoningEffortPercent.toFixed(1)+'%':''}`);
+      if(extras.length)section.append(element('p','activity-secondary',extras.join(' / ')));
+      const chart=activityChart(activity.daily);if(chart)section.append(chart);
+      if(activity.partial)section.append(element('p','detail-message','服务端统计暂不完整'));
+    }else if(!result?.error)section.append(element('p','detail-message','暂未提供数据'));
+    panel.append(section);
+  }
+  if(view.error||data?.rewards?.error||data?.activity?.error){const retry=element('button','quiet detail-retry','重试');retry.disabled=working;retry.onclick=()=>loadDetails(id);panel.append(retry);}
+}
+async function loadDetails(id){
+  const view=detailViews.get(id);if(!view||working)return;
+  view.loading=true;view.error='';renderDetails(id);await action('details',{id});
+}
+function toggleDetails(id){
+  const view=detailViews.get(id)||{open:false,data:null};detailViews.set(id,view);
+  view.open=!view.open;renderDetails(id);
+  if(view.open)void loadDetails(id);
+}
 function updateQuota(node,label,value,newFills){
   const known=value?.remainingPercent!=null;
   node.querySelector('.quota-title').textContent=period(value?.windowMinutes)||label;node.title=label;
@@ -79,7 +155,7 @@ function render(){
   const container=$('#accounts'),newFills=[];
   const reordering=state.accounts.length===cards.size&&state.accounts.some((account,index)=>container.children[index]!==cards.get(account.id));
   const positions=pendingPositions||(reordering?capturePositions():null);pendingPositions=null;
-  for(const [id,card] of cards)if(!state.accounts.some(account=>account.id===id)){card.remove();cards.delete(id);}
+  for(const [id,card] of cards)if(!state.accounts.some(account=>account.id===id)){card.remove();cards.delete(id);detailViews.delete(id);}
   container.querySelector('.empty')?.remove();
   state.accounts.forEach((account,index)=>{
     let card=cards.get(account.id);const fresh=!card;
@@ -95,6 +171,7 @@ function render(){
       let hue=0;for(const char of account.id)hue=(hue*31+char.charCodeAt(0))%360;card.style.setProperty('--hue',hue);
       card.querySelector('.relogin').onclick=()=>action('login',{id:account.id});
       card.querySelector('.remove').onclick=()=>{if(confirm('移除此账号并删除本机授权？'))action('remove',{id:account.id});};
+      card.querySelector('.details-toggle').onclick=()=>toggleDetails(account.id);
       container.append(card);
     }
     if(container.children[index]!==card)container.insertBefore(card,container.children[index]||null);
@@ -109,7 +186,11 @@ function render(){
     windows.forEach(([label,value],index)=>{let node=quotaGroup.children[index];const created=!node;if(created){node=$('#quota-template').content.firstElementChild.cloneNode(true);quotaGroup.append(node);}updateQuota(node,label,value,fresh||created?newFills:null);});
     card.querySelector('.updated').textContent=account.checkedAt?(account.error?'缓存 · ':'更新 · ')+date(account.checkedAt):'尚未更新';
     const error=card.querySelector('.account-error');error.hidden=!account.error;error.textContent=account.error||'';
+    const rewardCount=account.usage?.resetCredits?.availableCount??detailViews.get(account.id)?.data?.rewards?.data?.availableCount??null;
+    const badge=card.querySelector('.reward-badge');badge.querySelector('strong').textContent=rewardCount==null?'—':rewardCount;badge.classList.toggle('zero',!rewardCount);
+    const applicable=account.usage?.resetCredits?.applicableAvailableCount;badge.title='可用的额度重置奖励'+(applicable!=null?` · 当前适用 ${applicable} 次`:'');
     for(const button of card.querySelectorAll('button'))button.disabled=working||state.busy||state.loggingIn;
+    card.querySelector('.details-toggle').disabled=!detailViews.get(account.id)?.open&&(working||state.busy||state.loggingIn||account.status==='needs_login');
   });
   if(positions)animatePositions(positions);
   if(newFills.length)requestAnimationFrame(()=>requestAnimationFrame(()=>{for(const fill of newFills)if(fill.isConnected)fill.style.setProperty('--progress',fill.dataset.progress);}));
@@ -145,13 +226,15 @@ async function action(route,input={}){
     const account=state.accounts.find(account=>account.id===input.id);
     if(account){const ordered=state.accounts.filter(item=>item!==account),index=input.beforeId===null?ordered.length:ordered.findIndex(item=>item.id===input.beforeId);if(index>=0){ordered.splice(index,0,account);state.accounts=ordered;}}
   }
-  working=true;activeAction=route;showNotice('');if(state)render();
+  if(route==='login'&&input.id){detailViews.delete(input.id);const card=cards.get(input.id);if(card){card.querySelector('.account-details').hidden=true;card.querySelector('.details-toggle').setAttribute('aria-expanded','false');}}
+  working=true;activeAction=route;if(route!=='details')showNotice('');if(state)render();
   try{
     const response=await fetch('/api/'+route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)});
     const data=await response.json();if(!response.ok)throw new Error(data.error);
+    if(route==='details'){const view=detailViews.get(input.id);if(view)view.data=data;}
     if(data.url){if(popup)popup.location=data.url;else location.href=data.url;}
-  }catch(error){popup?.close();showNotice(error.message,true);}
-  finally{working=false;activeAction='';await update();}
+  }catch(error){popup?.close();if(route==='details'){const view=detailViews.get(input.id);if(view)view.error=error.message||'详情读取失败';}else showNotice(error.message,true);}
+  finally{working=false;activeAction='';if(route==='details'){const view=detailViews.get(input.id);if(view)view.loading=false;renderDetails(input.id);}await update();}
 }
 function capturePositions(){
   const positions=new Map([...cards.values()].map(card=>{const rect=card.getBoundingClientRect();return [card,{x:rect.left+scrollX,y:rect.top+scrollY}];}));

@@ -1,7 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { generateKeyPairSync, sign, createHash } = require('node:crypto');
-const { createLogin, exchangeLogin, verifyIdentity, normalizeUsage, refreshTokens, readUsage } = require('./openai');
+const { createLogin, exchangeLogin, verifyIdentity, normalizeUsage, normalizeResetCredits, normalizeActivity,
+  refreshTokens, readUsage, readResetCredits, readActivity } = require('./openai');
 const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const keys = [{ ...publicKey.export({ format: 'jwk' }), kid: 'test', use: 'sig', alg: 'RS256' }];
 const now = Date.now();
@@ -89,7 +90,7 @@ test('Pro 单周窗口不误认为短周期，不虚构 5 小时额度', () => {
     assert.equal(usage.long.windowMinutes, 10080);
     assert.equal(usage.long.remainingPercent, 82);
   }
-  assert.deepEqual(normalizeUsage({ plan_type: 'pro', rate_limit: null }), { planType: 'pro', short: null, long: null });
+  assert.deepEqual(normalizeUsage({ plan_type: 'pro', rate_limit: null }), { planType: 'pro', short: null, long: null, resetCredits: null });
 });
 
 test('窗口按返回的周期归类，不依赖主次字段位置或套餐名', () => {
@@ -151,4 +152,71 @@ test('429 响应保留 Retry-After 等待时间', async t => {
   t.mock.method(globalThis, 'fetch', async () => ({ ...mockResponse({ error: { code: 'rate_limit' } }, 429), headers: new Headers({ 'Retry-After': '120' }) }));
   await assert.rejects(readUsage({ accessToken: 'fake-access' }), error =>
     error.status === 429 && error.retryAt >= started + 120000 && error.retryAt <= Date.now() + 120000);
+});
+
+test('奖励数量接受零，缺失和变化不破坏核心额度', () => {
+  const usage = resets => normalizeUsage({ plan_type: 'pro', rate_limit: null, rate_limit_reset_credits: resets });
+  assert.deepEqual(usage({ available_count: 0, applicable_available_count: 0 }).resetCredits,
+    { availableCount: 0, applicableAvailableCount: 0 });
+  assert.deepEqual(usage({ available_count: 3 }).resetCredits, { availableCount: 3, applicableAvailableCount: null });
+  assert.equal(usage(null).resetCredits, null);
+  assert.deepEqual(usage({ available_count: '2', applicable_available_count: -1 }).resetCredits,
+    { availableCount: null, applicableAvailableCount: null });
+});
+
+test('奖励明细排除内部标识，区分无到期限制与有效期未知', () => {
+  const rewards = normalizeResetCredits({ available_count: 4, credits: [
+    { id: 'fake-private-credit', profile_user_id: 'fake-private-user', reset_type: 'codex_rate_limits',
+      status: 'available', is_supported_by_plan: true, granted_at: '2026-09-22T18:26:03Z', expires_at: '2026-10-22T18:26:03Z', title: 'Full reset' },
+    { reset_type: 'future_type', status: 'future_status', expires_at: null }, { expires_at: 'changed' }, null,
+  ] });
+  assert.equal(rewards.availableCount, 4); // 不能以明细条数代替可用次数。
+  assert.equal(rewards.credits.length, 3);
+  assert.equal(rewards.credits[0].expiresAt, Date.parse('2026-10-22T18:26:03Z'));
+  assert.equal(rewards.credits[1].expiresAt, null);
+  assert.equal(rewards.credits[1].expiresKnown, true);
+  assert.equal(rewards.credits[1].status, 'unknown');
+  assert.equal(rewards.credits[2].expiresKnown, false);
+  assert.doesNotMatch(JSON.stringify(rewards), /fake-private|profile_user_id|"id"/);
+  assert.equal(normalizeResetCredits({ available_count: 2 }).credits, null);
+  assert.throws(() => normalizeResetCredits({ changed: true }), /不兼容/);
+});
+
+test('活动数据只传统计字段，空值不成为零，日记录排序去重并限制体积', () => {
+  const daily = Array.from({ length: 20 }, (_, index) => ({ start_date: `2026-09-${String(index + 1).padStart(2, '0')}`, tokens: index }));
+  const activity = normalizeActivity({ profile: { username: 'fake-private-user' }, stats: {
+    lifetime_tokens: 1000, peak_daily_tokens: 0, current_streak_days: null, longest_streak_days: '9',
+    fast_mode_usage_percentage: 102, most_used_reasoning_effort: 'high',
+    daily_usage_buckets: [...daily.reverse(), { start_date: '2026-09-20', tokens: 50 }, { start_date: 'bad', tokens: 100 }, { start_date: '2026-09-21', tokens: -1 }],
+    top_invocations: [{ skill_id: 'fake-private-skill' }],
+  }, metadata: { stats_as_of: '2026-10-01', generated_at: '2026-10-01T08:00:00Z', stats_error: null } });
+  assert.equal(activity.lifetimeTokens, 1000);
+  assert.equal(activity.peakDailyTokens, 0);
+  assert.equal(activity.currentStreakDays, null);
+  assert.equal(activity.longestStreakDays, null);
+  assert.equal(activity.fastModePercent, null);
+  assert.equal(activity.daily.length, 14);
+  assert.equal(activity.daily[0].date, '2026-09-07');
+  assert.deepEqual(activity.daily.at(-1), { date: '2026-09-20', tokens: 50 });
+  assert.equal(activity.statsAsOf, Date.parse('2026-10-01'));
+  assert.equal(activity.partial, false);
+  assert.doesNotMatch(JSON.stringify(activity), /fake-private|profile|skill_id/);
+  assert.equal(normalizeActivity({ stats: {} }).daily, null);
+  assert.throws(() => normalizeActivity({ changed: true }), /不兼容/);
+});
+
+test('活动及奖励查询仅 GET，凭证放在请求头且保留账号路由', async t => {
+  const routes = [];
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    routes.push(url);
+    assert.ok(!options.method || options.method === 'GET');
+    assert.ok(!url.includes('fake-access'));
+    assert.equal(options.headers.Authorization, 'Bearer fake-access');
+    assert.equal(options.headers['ChatGPT-Account-Id'], 'account-1');
+    return mockResponse(url.endsWith('/profiles/me') ? { stats: { lifetime_tokens: 20 } } : { available_count: 0, credits: [] });
+  });
+  const account = { accessToken: 'fake-access', accountId: 'account-1' };
+  assert.equal((await readResetCredits(account)).availableCount, 0);
+  assert.equal((await readActivity(account)).lifetimeTokens, 20);
+  assert.deepEqual(routes, ['https://chatgpt.com/backend-api/wham/rate-limit-reset-credits', 'https://chatgpt.com/backend-api/wham/profiles/me']);
 });

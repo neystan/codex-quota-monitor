@@ -45,7 +45,7 @@ test('多账号 HTTP 服务：隔离失败、后台更新、去重和删除', { 
     const realListen = http.Server.prototype.listen;
     http.Server.prototype.listen = function(port, ...args) { return realListen.call(this, port === 1455 ? ${callbackPort} : port, ...args); };
     const realNow = Date.now;
-    let offset = 0, timer, hold = false, release, holdExchange = false, releaseExchange;
+    let offset = 0, timer, hold = false, release, holdExchange = false, releaseExchange, holdDetails = false, releaseDetails;
     Date.now = () => realNow() + offset;
     const realInterval = setInterval;
     global.setInterval = (fn, ms, ...args) => { if (ms === 300000) timer = fn; return realInterval(fn, ms, ...args); };
@@ -55,8 +55,10 @@ test('多账号 HTTP 服务：隔离失败、后台更新、去重和删除', { 
       if (msg.action === 'tick') { offset += 300000; timer(); }
       if (msg.action === 'hold') hold = true;
       if (msg.action === 'holdExchange') holdExchange = true;
+      if (msg.action === 'holdDetails') holdDetails = true;
       if (msg.action === 'release') { hold = false; release?.(); }
       if (msg.action === 'releaseExchange') { holdExchange = false; releaseExchange?.(); }
+      if (msg.action === 'releaseDetails') { holdDetails = false; releaseDetails?.(); }
       process.send({ ack: msg.id });
     });
     const counts = new Map();
@@ -68,6 +70,18 @@ test('多账号 HTTP 服务：隔离失败、后台更新、去重和删除', { 
       return { planType: 'plus', short: { usedPercent: count, remainingPercent: 100 - count, windowMinutes: 300, resetAtMs: Date.now() + 18000000 }, long: null };
     };
     adapter.refreshTokens = async () => { throw new adapter.OpenAIError('模拟授权失效', 400, 'invalid_grant'); };
+    const detailCounts = new Map();
+    const detailCount = (account, key) => {
+      const id = account.subject + '-' + key, count = (detailCounts.get(id) || 0) + 1;
+      detailCounts.set(id, count); return count;
+    };
+    adapter.readResetCredits = async account => {
+      if (holdDetails) await new Promise(resolve => { releaseDetails = resolve; });
+      const count = detailCount(account, 'rewards');
+      if (account.subject === 'flaky' && count === 1) throw new adapter.OpenAIError('奖励暂时限流', 429, 'rate_limit', Date.now() + 120000);
+      return { availableCount: count, credits: [] };
+    };
+    adapter.readActivity = async account => ({ lifetimeTokens: detailCount(account, 'activity'), daily: [] });
     adapter.exchangeLogin = async (login, params) => {
       if (holdExchange) await new Promise(resolve => { releaseExchange = resolve; });
       const subject = params.get('code') === 'duplicate' ? 'healthy' : 'added';
@@ -132,6 +146,23 @@ test('多账号 HTTP 服务：隔离失败、后台更新、去重和删除', { 
     assert.equal(healthy.status, 'ok');
     assert.doesNotMatch(JSON.stringify(initial), /fake-private|accessToken|refreshToken|clientId|accountId/);
   });
+  await t.test('按需查询奖励与活动，缓存成功结果，失败互不影响且尊重限流', async () => {
+    const first = await post('details', { id: healthy.id });
+    assert.equal(first.status, 200);
+    assert.equal(first.data.rewards.data.availableCount, 1);
+    assert.equal(first.data.activity.data.lifetimeTokens, 1);
+    assert.deepEqual((await post('details', { id: healthy.id })).data, first.data);
+    assert.doesNotMatch(JSON.stringify(first.data), /fake-private|accessToken|refreshToken|accountId/);
+    const failed = await post('details', { id: flaky.id });
+    assert.equal(failed.data.rewards.data, null);
+    assert.equal(failed.data.rewards.error, '奖励暂时限流');
+    assert.ok(failed.data.rewards.retryAt > Date.now());
+    assert.equal(failed.data.activity.data.lifetimeTokens, 1);
+    assert.deepEqual((await post('details', { id: flaky.id })).data, failed.data);
+    assert.equal((await post('details', { id: 'missing' })).status, 400);
+    assert.equal((await status()).accounts.find(a => a.id === flaky.id).status, 'ok');
+    assert.equal((await fetch(origin + '/api/details', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: healthy.id }) })).status, 403);
+  });
   await t.test('5 分钟定时器触发更新，单个失败保留旧数据且不影响其他账号', async () => {
     await command('tick');
     const updated = await waitFor(async () => { const s = await status(); return !s.busy && s.accounts.find(a => a.id === healthy.id).checkedAt > healthy.checkedAt && s; });
@@ -148,6 +179,7 @@ test('多账号 HTTP 服务：隔离失败、后台更新、去重和删除', { 
     const same = await status();
     assert.equal(same.accounts.length, 3);
     assert.equal(same.accounts.find(a => a.email.startsWith('healthy')).id, healthy.id);
+    assert.equal((await post('details', { id: healthy.id })).data.activity.data.lifetimeTokens, 2);
     const added = await post('login');
     assert.equal(await callback(added.data.url, 'new'), 303);
     assert.equal((await status()).accounts.length, 4);
@@ -202,5 +234,18 @@ test('多账号 HTTP 服务：隔离失败、后台更新、去重和删除', { 
     const saved = JSON.parse(await fs.readFile(path.join(data, 'accounts.json'), 'utf8'));
     assert.equal(saved.accounts.length, 3);
     assert.ok(!saved.accounts.some(a => a.id === flaky.id));
+    assert.equal((await post('details', { id: flaky.id })).status, 400);
+  });
+  await t.test('详情缓存到期重新查询，读取期间保持删除锁', async () => {
+    for (let index = 0; index < 3; index++) { await command('tick'); await waitFor(async () => !(await status()).busy); }
+    assert.equal((await post('details', { id: healthy.id })).data.activity.data.lifetimeTokens, 3);
+    const added = (await status()).accounts.find(a => a.email.startsWith('added'));
+    await command('holdDetails');
+    const pending = post('details', { id: added.id });
+    await waitFor(async () => (await status()).busy);
+    assert.equal((await post('remove', { id: added.id })).status, 409);
+    await command('releaseDetails');
+    assert.equal((await pending).status, 200);
+    assert.ok((await status()).accounts.some(a => a.id === added.id));
   });
 });

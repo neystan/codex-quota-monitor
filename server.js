@@ -3,15 +3,17 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
-const { createLogin, exchangeLogin, refreshTokens, readUsage, OpenAIError } = require('./openai');
+const { createLogin, exchangeLogin, refreshTokens, readUsage, readResetCredits, readActivity, OpenAIError } = require('./openai');
 const { getSystemProxy } = require('./proxy');
 const { dataDirectory, assertNodeVersion, configuredPort } = require('./runtime');
 
 const REFRESH_MS = 5 * 60 * 1000;
+const DETAILS_MS = 15 * 60 * 1000;
 const dataDir = dataDirectory();
 const stateFile = path.join(dataDir, 'accounts.json');
 const configFile = path.join(dataDir, 'config.json');
 const cache = new Map();
+const detailsCache = new Map();
 let config, state, origin, login, callbackServer, loginTimeout, refreshTimer;
 let busy = false, refreshPromise = null, nextRefreshAt = 0, notice = null;
 let proxy = {}, restoreProxy;
@@ -70,33 +72,57 @@ async function renew(account) {
     throw error;
   }
 }
+async function authorizedRead(account, read) {
+  if (proxy.error) throw new OpenAIError(proxy.error);
+  let renewed = false;
+  if (account.expiresAt <= Date.now() + 60000) { await renew(account); renewed = true; }
+  try { return await read(account); }
+  catch (error) {
+    if (error.status === 401 && renewed) throw new OpenAIError('授权已失效，请重新登录', 401, 'reauth_required');
+    if (error.status !== 401 || Date.now() < account.earliestRefreshAt) throw error;
+    await renew(account);
+    try { return await read(account); }
+    catch (retryError) {
+      if (retryError.status === 401) throw new OpenAIError('授权已失效，请重新登录', 401, 'reauth_required');
+      throw retryError;
+    }
+  }
+}
 async function refreshAccount(account) {
   const previous = cache.get(account.id) || {};
   if (previous.status === 'needs_login' || Date.now() < (previous.retryAt || 0)) return;
   cache.set(account.id, { ...previous, status: 'refreshing' });
   try {
-    if (proxy.error) throw new OpenAIError(proxy.error);
-    let renewed = false;
-    if (account.expiresAt <= Date.now() + 60000) { await renew(account); renewed = true; }
-    let usage;
-    try { usage = await readUsage(account); }
-    catch (error) {
-      if (error.status === 401 && renewed) throw new OpenAIError('授权已失效，请重新登录', 401, 'reauth_required');
-      if (error.status !== 401 || renewed || Date.now() < account.earliestRefreshAt) throw error;
-      await renew(account);
-      renewed = true;
-      try { usage = await readUsage(account); }
-      catch (retryError) {
-        if (retryError.status === 401) throw new OpenAIError('授权已失效，请重新登录', 401, 'reauth_required');
-        throw retryError;
-      }
-    }
+    const usage = await authorizedRead(account, readUsage);
     cache.set(account.id, { status: 'ok', usage, checkedAt: Date.now() });
   } catch (error) {
     const needsLogin = error instanceof OpenAIError && error.code === 'reauth_required';
     cache.set(account.id, { ...previous, status: needsLogin ? 'needs_login' : 'error', error: message(error),
       retryAt: error.status === 429 ? (error.retryAt > Date.now() ? error.retryAt : Date.now() + REFRESH_MS) : 0 });
   }
+}
+async function readDetails(account) {
+  applyProxy();
+  const details = detailsCache.get(account.id) || {};
+  for (const [key, read] of [['rewards', readResetCredits], ['activity', readActivity]]) {
+    const previous = details[key];
+    if (previous && (Date.now() < previous.retryAt || (!previous.error && Date.now() < previous.checkedAt + DETAILS_MS))) continue;
+    try {
+      const data = await authorizedRead(account, read);
+      details[key] = { data, checkedAt: Date.now(), error: '', retryAt: 0 };
+    } catch (error) {
+      details[key] = { data: previous?.data || null, checkedAt: previous?.checkedAt || null, error: message(error),
+        retryAt: error.status === 429 ? (error.retryAt > Date.now() ? error.retryAt : Date.now() + REFRESH_MS) : 0 };
+      if (error.code === 'reauth_required') {
+        cache.set(account.id, { ...cache.get(account.id), status: 'needs_login', error: message(error) });
+        for (const other of ['rewards', 'activity']) if (other !== key)
+          details[other] = { data: details[other]?.data || null, checkedAt: details[other]?.checkedAt || null, error: message(error), retryAt: 0 };
+        break;
+      }
+    }
+  }
+  detailsCache.set(account.id, details);
+  return details;
 }
 function refreshAll() {
   if (busy || refreshPromise) return refreshPromise || Promise.resolve();
@@ -139,6 +165,7 @@ async function beginLogin(target) {
       if (existing) state.accounts[state.accounts.indexOf(existing)] = account;
       else state.accounts.push(account);
       await save();
+      detailsCache.delete(account.id);
       cache.set(account.id, { ...(cache.get(account.id) || {}), status: 'waiting', error: '', retryAt: 0 });
       await refreshAccount(account);
       notice = { text: existing ? '账号授权已更新。' : '账号已添加。', at: Date.now(), error: false };
@@ -185,6 +212,12 @@ const server = http.createServer(async (request, response) => {
         busy: Boolean(busy || refreshPromise), refreshing: Boolean(refreshPromise), loggingIn: Boolean(login), nextRefreshAt, notice });
     if (mutating) {
       const input = await readInput(request);
+      if (url.pathname === '/api/details') {
+        const account = state.accounts.find(account => account.id === input.id);
+        if (!account) throw new OpenAIError('账号不存在');
+        if (cache.get(account.id)?.status === 'needs_login') throw new OpenAIError('授权已失效，请重新登录');
+        return reply(response, await readDetails(account));
+      }
       if (url.pathname === '/api/reorder') {
         const account = state.accounts.find(account => account.id === input.id);
         if (!account || (input.beforeId !== null && !state.accounts.some(account => account.id === input.beforeId)))
@@ -210,6 +243,7 @@ const server = http.createServer(async (request, response) => {
         const [account] = state.accounts.splice(index, 1);
         try { await save(); } catch (error) { state.accounts.splice(index, 0, account); throw error; }
         cache.delete(account.id);
+        detailsCache.delete(account.id);
         return reply(response, { ok: true });
       }
       if (url.pathname === '/api/refresh') {

@@ -6,6 +6,8 @@ const CODEX_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
 const TOKEN_URL = `${ISSUER}/oauth/token`;
 const SCOPE = 'openid profile email offline_access';
 const USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage';
+const RESET_CREDITS_URL = 'https://chatgpt.com/backend-api/wham/rate-limit-reset-credits';
+const ACTIVITY_URL = 'https://chatgpt.com/backend-api/wham/profiles/me';
 let cachedKeys;
 
 class OpenAIError extends Error {
@@ -171,14 +173,64 @@ function normalizeUsage(body) {
     [short, long] = [long, short];
   else if (!long && short?.windowMinutes >= 1440) [short, long] = [null, short];
   else if (!short && long?.windowMinutes > 0 && long.windowMinutes < 1440) [short, long] = [long, null];
-  return { planType: typeof body.plan_type === 'string' ? body.plan_type : null, short, long };
+  const resets = body.rate_limit_reset_credits;
+  return { planType: typeof body.plan_type === 'string' ? body.plan_type : null, short, long,
+    resetCredits: resets && typeof resets === 'object' ? {
+      availableCount: count(resets.available_count), applicableAvailableCount: count(resets.applicable_available_count),
+    } : null };
 }
 
-async function readUsage(account) {
+function count(value) { return Number.isSafeInteger(value) && value >= 0 ? value : null; }
+function timestamp(value) {
+  const parsed = typeof value === 'string' ? Date.parse(value) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+function normalizeResetCredits(body) {
+  if (!body || (!Array.isArray(body.credits) && count(body.available_count) === null))
+    throw new OpenAIError('奖励接口字段暂不兼容', 200, 'unsupported_schema');
+  return { availableCount: count(body.available_count), credits: Array.isArray(body.credits) ? body.credits
+    .filter(credit => credit && typeof credit === 'object').map(credit => ({
+      resetType: credit.reset_type === 'codex_rate_limits' ? 'codex_rate_limits' : 'unknown',
+      status: ['available', 'redeeming', 'redeemed'].includes(credit.status) ? credit.status : 'unknown',
+      supportedByPlan: typeof credit.is_supported_by_plan === 'boolean' ? credit.is_supported_by_plan : null,
+      grantedAt: timestamp(credit.granted_at), expiresAt: timestamp(credit.expires_at),
+      expiresKnown: credit.expires_at === null || timestamp(credit.expires_at) !== null,
+      title: typeof credit.title === 'string' ? credit.title.slice(0, 200) : '',
+      description: typeof credit.description === 'string' ? credit.description.slice(0, 400) : '',
+    })) : null };
+}
+function normalizeActivity(body) {
+  const stats = body?.stats;
+  if (!stats || typeof stats !== 'object' || Array.isArray(stats))
+    throw new OpenAIError('活动接口字段暂不兼容', 200, 'unsupported_schema');
+  const amount = value => Number.isFinite(value) && value >= 0 ? value : null;
+  const percentage = value => amount(value) !== null && value <= 100 ? value : null;
+  // 仅向页面传递统计字段，排除远端身份、头像、会话与技能标识。
+  const daily = new Map();
+  if (Array.isArray(stats.daily_usage_buckets)) for (const bucket of stats.daily_usage_buckets) {
+    if (bucket && /^\d{4}-\d{2}-\d{2}$/.test(bucket.start_date) && timestamp(bucket.start_date) && count(bucket.tokens) !== null)
+      daily.set(bucket.start_date, { date: bucket.start_date, tokens: bucket.tokens });
+  }
+  return { lifetimeTokens: count(stats.lifetime_tokens), peakDailyTokens: count(stats.peak_daily_tokens),
+    currentStreakDays: count(stats.current_streak_days), longestStreakDays: count(stats.longest_streak_days),
+    longestRunningTurnSec: amount(stats.longest_running_turn_sec), totalThreads: count(stats.total_threads),
+    fastModePercent: percentage(stats.fast_mode_usage_percentage), totalSkillsUsed: count(stats.total_skills_used),
+    uniqueSkillsUsed: count(stats.unique_skills_used),
+    reasoningEffort: ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'].includes(stats.most_used_reasoning_effort) ? stats.most_used_reasoning_effort : null,
+    reasoningEffortPercent: percentage(stats.most_used_reasoning_effort_percentage),
+    daily: Array.isArray(stats.daily_usage_buckets) ? [...daily.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-14) : null,
+    statsAsOf: timestamp(body.metadata?.stats_as_of), generatedAt: timestamp(body.metadata?.generated_at),
+    partial: Boolean(body.metadata?.stats_error) };
+}
+
+async function accountRequest(url, account) {
   const headers = { Authorization: `Bearer ${account.accessToken}` };
   if (account.accountId) headers['ChatGPT-Account-Id'] = account.accountId;
-  const body = await request(USAGE_URL, { headers });
-  return normalizeUsage(body);
+  return request(url, { headers });
 }
+async function readUsage(account) { return normalizeUsage(await accountRequest(USAGE_URL, account)); }
+async function readResetCredits(account) { return normalizeResetCredits(await accountRequest(RESET_CREDITS_URL, account)); }
+async function readActivity(account) { return normalizeActivity(await accountRequest(ACTIVITY_URL, account)); }
 
-module.exports = { createLogin, exchangeLogin, refreshTokens, readUsage, verifyIdentity, normalizeUsage, OpenAIError };
+module.exports = { createLogin, exchangeLogin, refreshTokens, readUsage, readResetCredits, readActivity,
+  verifyIdentity, normalizeUsage, normalizeResetCredits, normalizeActivity, OpenAIError };
