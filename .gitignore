@@ -1,0 +1,13 @@
+node_modules/
+config.json
+accounts.json
+*.tmp
+*.log
+.test-data/
+.DS_Store
+.env
+.env.*
+runtime/
+dist/
+*.tgz
+设计实施文档.md

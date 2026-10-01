@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5f5f7">
+<title>Codex 额度监控</title>
+<style>
+:root{color-scheme:light;--ink:#1d1d1f;--muted:#86868b;--line:rgba(30,35,50,.075);--blue:#0071e3;--ease:cubic-bezier(.22,1,.36,1)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse 70% 460px at 85% 0%,#e9edfc80,transparent),radial-gradient(ellipse 60% 500px at 0% 35%,#e7eff750,transparent),#f5f5f7;color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:10px 17px;border:1px solid rgba(255,255,255,.9);border-radius:999px;background:#ffffffcf;box-shadow:0 1px 3px #20203008;color:var(--ink);cursor:pointer;transition:transform .22s var(--ease),background .2s,box-shadow .2s}button:hover:not(:disabled){background:white;box-shadow:0 3px 12px #2020300b;transform:translateY(-1px)}button:active:not(:disabled){transform:scale(.97);box-shadow:none}button:disabled{opacity:.42;cursor:default}button:focus-visible,summary:focus-visible{outline:3px solid #0071e34d;outline-offset:3px}
+.icon{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}.primary{background:linear-gradient(#1687f3,#0071e3);border-color:#0071e333;color:white;box-shadow:0 3px 8px #0071e31c,inset 0 1px 0 #ffffff24}.primary:hover:not(:disabled){background:linear-gradient(#2793ff,#087aea);box-shadow:0 5px 15px #0071e328}.quiet{min-height:30px;border:0;background:transparent;box-shadow:none;font-size:12px;padding:5px 9px;color:#858b95}.quiet:hover:not(:disabled){background:#f0f1f5;box-shadow:none;transform:none;color:#4f5663}.danger:hover:not(:disabled){background:#fff0ef;color:#c34841}
+.shell{max-width:1460px;margin:auto;padding:32px 32px 28px}
+.heading{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:10px 2px 22px;animation:reveal .7s var(--ease) both}h1{font-size:28px;line-height:1.2;letter-spacing:-.8px;font-weight:620;margin:0}p{margin:0}.toolbar{display:flex;gap:9px;flex-shrink:0}.toolbar button{font-size:13px;padding-inline:16px}.toolbar .primary{padding-inline:18px}
+.list-top{display:flex;justify-content:space-between;align-items:center;gap:12px;color:#8a909b;font-size:12px;margin:0 5px 14px;animation:reveal .65s var(--ease) .12s both}.connected{display:flex;align-items:center;gap:8px}.list-top strong{display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:19px;border-radius:6px;background:#e9eaf0;color:#757984;font-size:10px;font-weight:600}.auto{display:flex;gap:6px;align-items:center}.dot{width:5px;height:5px;border-radius:50%;background:#55a57b}#next{color:#a1a3ac;font-variant-numeric:tabular-nums}
+.card{position:relative;min-width:0;flex:0 0 calc((100% - 36px)/3);padding:22px 22px 18px;border:1px solid #fff;border-radius:24px;background:linear-gradient(150deg,#ffffffed,#ffffffd6);box-shadow:0 2px 3px #25283902,0 8px 24px #25283904;transition:transform .24s var(--ease),box-shadow .24s,border-color .24s}.card.entering{animation:card-in .65s var(--ease) both;animation-delay:var(--delay,0ms)}.account-head{display:flex;gap:8px;align-items:center;margin-bottom:16px}.avatar{display:grid;place-items:center;width:32px;height:32px;border:1px solid #ffffffb3;border-radius:11px;background:linear-gradient(145deg,hsl(var(--hue,210) 60% 96%),hsl(var(--hue,210) 48% 91%));color:hsl(var(--hue,210) 25% 47%);font-size:15px;font-weight:600;box-shadow:inset 0 1px 1px white;flex-shrink:0}.identity{min-width:0}.email{font-size:13px;font-weight:610;letter-spacing:-.15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.account-meta{display:flex;align-items:center;gap:9px;margin-top:4px;font-size:11px}.plan{padding:1px 6px;border-radius:5px;background:#f2f3f6;color:#9296a0;font-size:10px;letter-spacing:.35px;font-weight:600}.state{display:inline-flex;align-items:center;gap:4px;color:#69a083}.state::before{content:'';width:4px;height:4px;border-radius:50%;background:currentColor}.state.error{color:#c18b39}.state.needs_login{color:#c96862}.state.refreshing,.state.waiting{color:#9298a7}.account-actions{display:flex;align-items:center;gap:2px;margin-left:auto;flex-shrink:0;cursor:default}.account-actions .quiet{width:28px;height:28px;min-height:28px;padding:6px;border-radius:9px}
+.quotas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;background:linear-gradient(140deg,#f6f8fb,#f7f8fa80);border:1px solid #edf0f5;border-radius:14px;overflow:hidden}.quotas.single{grid-template-columns:1fr}.quota{min-width:0;padding:13px 12px 12px}.quota+.quota{border-left:1px solid #e7ebf2}.quota-label{display:flex;justify-content:space-between;align-items:center;gap:5px;color:#7f8795;font-size:11px}.meter{height:4px;margin:11px 0 10px;overflow:hidden;border-radius:8px;background:#e5eaf1}.fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,#4d87d6,#85ade8);transform:scaleX(var(--progress,0));transform-origin:left;transition:transform .7s var(--ease),opacity .3s}.fill[data-tone="amber"]{background:linear-gradient(90deg,#cca158,#dec492)}.fill[data-tone="red"]{background:linear-gradient(90deg,#c87f7b,#e2aaa6)}.numbers{display:flex;align-items:baseline;gap:1px;white-space:nowrap}.remaining{font-size:18px;line-height:1;font-weight:560;letter-spacing:-.4px;font-variant-numeric:tabular-nums}.percent{font-size:10px;color:#8993a3;margin-left:1px}.remaining-label{font-size:9px;color:#a0a9b6;margin-right:4px;font-weight:400}.countdown{color:#7d899c;font-size:10px;white-space:nowrap;font-variant-numeric:tabular-nums}.reset-date{margin-top:3px;color:#a0a8b5;font-size:10px;font-variant-numeric:tabular-nums}.card-foot{display:flex;align-items:center;gap:5px;margin-top:12px;padding-left:2px;font-size:10px;color:#a0a8b6}.card-foot .icon{width:12px;height:12px;opacity:.8}.account-error{margin-top:13px;padding:9px 11px;border-radius:9px;background:#fff6e9;color:#b07d3a;font-size:11px;overflow-wrap:anywhere}.empty{padding:70px 24px;text-align:center;color:#9a9ca6;border:1px solid #fff;border-radius:24px;background:#ffffffb0;animation:reveal .5s var(--ease) both}.empty strong{display:block;color:#5d636f;font-size:16px;font-weight:550;margin-bottom:7px}
+.notice,.login-status{padding:12px 16px;border:1px solid #ffffffb3;border-radius:16px;margin-bottom:17px;font-size:12px;background:#eaf1fd;color:#6281a9;animation:reveal .32s var(--ease) both}.notice.error{background:#fff0ec;color:#b37868}.login-status{display:flex;align-items:center;justify-content:space-between;gap:12px}.login-status small{display:block;font-size:10px;color:#8a9ab0;margin-top:4px}.login-status button{min-height:32px;padding:6px 12px;font-size:11px}.notice[hidden],.login-status[hidden]{display:none}
+.settings{margin-top:20px;padding:4px 3px;animation:reveal .65s var(--ease) .2s both}.settings summary{display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;list-style:none;font-size:12px;color:#8b94a3}.settings summary::-webkit-details-marker{display:none}.settings-title{display:inline-flex;align-items:center;gap:7px}.chevron{width:12px;height:12px;color:#aab0bb;transition:transform .25s var(--ease)}.settings[open] .chevron{transform:rotate(90deg)}#proxy-current{font:11px "SFMono-Regular",Consolas,monospace;color:#b1b5be;overflow-wrap:anywhere}.settings p{font-size:10px;color:#a5aab5;margin-top:10px;line-height:1.7}
+.is-loading .refresh-icon{animation:spin .9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@keyframes reveal{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}@keyframes card-in{from{opacity:0;transform:translateY(16px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+.drag-handle{cursor:grab;padding:3px;min-width:18px;width:18px;color:#a5aebb;flex-shrink:0;touch-action:none;user-select:none}.drag-handle:active,.account-head:active{cursor:grabbing}.account-head{cursor:grab;touch-action:none}.identity{flex:1}.card.dragging{position:fixed;z-index:10;pointer-events:none;transform:scale(1.018);border-color:#dce8fc;box-shadow:0 20px 54px #253c632b;will-change:translate,transform}.drag-slot{position:relative;flex:0 0 calc((100% - 36px)/3);border:1px dashed #85ade979;border-radius:24px;background:#e7effc45;box-shadow:inset 0 0 0 4px #ffffff5e}#accounts{--columns:3;display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:18px;position:relative;overflow-anchor:none}#accounts.sorting .card:not(.dragging){transform:none}.empty{width:100%}body.card-sorting{user-select:none;cursor:grabbing}
+@media(hover:hover){#accounts:not(.sorting) .card:not(.entering):not(.dragging):hover{transform:translateY(-2px);border-color:#eef2fb;box-shadow:0 3px 5px #25283903,0 12px 30px #25283908}}
+@media(max-width:1100px){#accounts{--columns:2}.card,.drag-slot{flex-basis:calc((100% - 18px)/2)}.shell{padding:26px 24px}.card{padding:21px 20px 17px}}
+@media(max-width:740px){#accounts{--columns:1}.card,.drag-slot{flex-basis:100%;max-width:500px}.heading{align-items:flex-start;flex-direction:column;gap:16px;margin:4px 2px 20px}h1{font-size:26px}.toolbar{width:100%}.toolbar button{flex:1}.shell{padding:22px 20px}.settings{max-width:500px;margin-inline:auto}}
+@media(max-width:480px){.shell{padding:20px 14px 24px}.list-top{font-size:11px}.auto{gap:4px}.card{padding:18px 16px 15px;border-radius:22px}.email{font-size:12px}.quota{padding:12px 9px 11px}.settings summary{font-size:10px}.login-status{align-items:flex-start}#next{font-size:10px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.card:hover,button:hover,button:active{transform:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M6.2 7a7 7 0 0 1 11.6-1L20 9M4 15l2.2 3a7 7 0 0 0 11.6-1"/></symbol>
+<symbol id="i-login" viewBox="0 0 24 24"><path d="M14 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5M3 12h12M10 7l5 5-5 5"/></symbol>
+<symbol id="i-remove" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-grip" viewBox="0 0 24 24"><path d="M8 5h.01M16 5h.01M8 12h.01M16 12h.01M8 19h.01M16 19h.01" stroke-width="3"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+</defs></svg>
+<main class="shell">
+<div class="heading"><h1>Codex 额度</h1><div class="toolbar"><button id="refresh"><svg class="icon refresh-icon" aria-hidden="true"><use href="#i-refresh"/></svg><span id="refresh-label">刷新全部</span></button><button class="primary" id="add"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>添加账号</button></div></div>
+<div id="notice" class="notice" role="status" hidden></div>
+<div id="login-status" class="login-status" hidden><div>等待浏览器完成登录<small>请选择要添加的账号；重复登录会更新已有账号。</small></div><button id="cancel">取消登录</button></div>
+<div class="list-top"><span class="connected">账号 <strong id="count">0</strong></span><span class="auto"><i class="dot"></i><span id="auto-label" title="后台每 5 分钟刷新额度">自动更新</span><span id="next"></span></span></div>
+<div id="accounts"><div class="empty"><strong>正在读取账号…</strong></div></div>
+<details class="settings"><summary><span class="settings-title"><svg class="icon chevron" aria-hidden="true"><use href="#i-chevron"/></svg>连接状态</span><span id="proxy-current"></span></summary><p id="proxy-status"></p></details>
+</main>
+<template id="account-template"><article class="card"><div class="account-head"><div class="avatar" aria-hidden="true"></div><div class="identity"><div class="email"></div><div class="account-meta"><span class="plan"></span><span class="state"></span></div></div><div class="account-actions"><button class="quiet relogin" aria-label="重新登录" title="重新登录"><svg class="icon" aria-hidden="true"><use href="#i-login"/></svg></button><button class="quiet danger remove" aria-label="移除账号" title="移除"><svg class="icon" aria-hidden="true"><use href="#i-remove"/></svg></button></div></div><div class="quotas"></div><p class="account-error" hidden></p><div class="card-foot" title="上次成功获取额度的时间"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><span class="updated"></span></div></article></template>
+<template id="quota-template"><div class="quota"><div class="quota-label"><span class="quota-title"></span><span class="numbers"><span class="remaining-label">剩余</span><span class="remaining"></span><span class="percent">%</span></span></div><div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="fill"></div></div><div class="countdown"></div><div class="reset-date" title="重置时间"></div></div></template>
+<script>
+const $=selector=>document.querySelector(selector),cards=new Map();
+let state=null,working=false,activeAction='',noticeSeen=0,pollTimer,tickTimer,draggedId=null;
+let dragPointer=null,dragX=0,dragY=0,dragStartX=0,dragStartY=0,dragMoved=false,dragScrollTimer,dragSlot=null,pendingPositions=null;
+const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+const dateFormat=new Intl.DateTimeFormat('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+const statuses={ok:'正常',waiting:'等待更新',refreshing:'正在更新',error:'查询失败',needs_login:'需要重新登录'};
+function date(value){return value?dateFormat.format(value):'未知';}
+function showNotice(text,error=false){$('#notice').textContent=text;$('#notice').className='notice'+(error?' error':'');$('#notice').hidden=!text;}
+function period(minutes){if(!minutes)return '';if(minutes%10080===0)return `${minutes/10080} 周`;if(minutes%1440===0)return `${minutes/1440} 天`;if(minutes%60===0)return `${minutes/60} 小时`;return `${minutes} 分钟`;}
+function updateQuota(node,label,value,newFills){
+  const known=value?.remainingPercent!=null;
+  node.querySelector('.quota-title').textContent=period(value?.windowMinutes)||label;node.title=label;
+  const number=node.querySelector('.remaining'),nextValue=known?String(Math.round(value.remainingPercent*10)/10):'—';
+  if(!newFills&&number.textContent!==nextValue&&!reducedMotion.matches)number.animate([{opacity:.45,transform:'translateY(3px)'},{opacity:1,transform:'translateY(0)'}],{duration:350,easing:'cubic-bezier(.22,1,.36,1)'});
+  number.textContent=nextValue;
+  node.querySelector('.percent').hidden=!known;
+  const bar=node.querySelector('.meter'),fill=node.querySelector('.fill');
+  const tone=known&&value.remainingPercent<=10?'red':known&&value.remainingPercent<=30?'amber':'blue';
+  bar.hidden=!known;fill.dataset.tone=tone;fill.style.opacity=known&&value.remainingPercent>0?'1':'0';
+  fill.dataset.progress=known?value.remainingPercent/100:0;
+  if(newFills&&!reducedMotion.matches)newFills.push(fill);else fill.style.setProperty('--progress',fill.dataset.progress);
+  bar.setAttribute('aria-label',label+'剩余额度');
+  if(known)bar.setAttribute('aria-valuenow',value.remainingPercent);else bar.removeAttribute('aria-valuenow');
+  node.querySelector('.reset-date').textContent=value?.resetAtMs?date(value.resetAtMs):'';
+  const countdown=node.querySelector('.countdown');
+  if(value?.resetAtMs)countdown.dataset.reset=value.resetAtMs;else{delete countdown.dataset.reset;countdown.textContent=value?'重置时间未知':'未提供额度数据';}
+}
+function render(){
+  const container=$('#accounts'),newFills=[];
+  const reordering=state.accounts.length===cards.size&&state.accounts.some((account,index)=>container.children[index]!==cards.get(account.id));
+  const positions=pendingPositions||(reordering?capturePositions():null);pendingPositions=null;
+  for(const [id,card] of cards)if(!state.accounts.some(account=>account.id===id)){card.remove();cards.delete(id);}
+  container.querySelector('.empty')?.remove();
+  state.accounts.forEach((account,index)=>{
+    let card=cards.get(account.id);const fresh=!card;
+    if(fresh){
+      card=$('#account-template').content.firstElementChild.cloneNode(true);cards.set(account.id,card);
+      card.dataset.id=account.id;
+      const handle=document.createElement('button');handle.className='quiet drag-handle';
+      handle.title='按住卡片顶部或此手柄拖动，也可按方向键移动';handle.setAttribute('aria-label','调整账号顺序');
+      handle.innerHTML='<svg class="icon" aria-hidden="true"><use href="#i-grip"/></svg>';
+      card.querySelector('.account-head').prepend(handle);
+      card.style.setProperty('--delay',Math.min(index*65,325)+'ms');
+      card.classList.add('entering');card.addEventListener('animationend',event=>{if(event.target===card)card.classList.remove('entering');});
+      let hue=0;for(const char of account.id)hue=(hue*31+char.charCodeAt(0))%360;card.style.setProperty('--hue',hue);
+      card.querySelector('.relogin').onclick=()=>action('login',{id:account.id});
+      card.querySelector('.remove').onclick=()=>{if(confirm('移除此账号并删除本机授权？'))action('remove',{id:account.id});};
+      container.append(card);
+    }
+    if(container.children[index]!==card)container.insertBefore(card,container.children[index]||null);
+    card.querySelector('.avatar').textContent=(account.email||'C')[0].toUpperCase();
+    card.querySelector('.email').textContent=account.email||'未提供邮箱';card.querySelector('.email').title=account.email||'未提供邮箱';
+    card.querySelector('.plan').textContent=account.usage?.planType?.toUpperCase()||'套餐未知';
+    card.querySelector('.state').textContent=statuses[account.status]||'未知';card.querySelector('.state').className='state '+account.status;
+    const quotaGroup=card.querySelector('.quotas'),windows=[['短周期',account.usage?.short],['长期',account.usage?.long]].filter(([,value])=>value!=null);
+    if(!windows.length)windows.push(['额度',null]);
+    while(quotaGroup.children.length>windows.length)quotaGroup.lastElementChild.remove();
+    quotaGroup.classList.toggle('single',windows.length===1);
+    windows.forEach(([label,value],index)=>{let node=quotaGroup.children[index];const created=!node;if(created){node=$('#quota-template').content.firstElementChild.cloneNode(true);quotaGroup.append(node);}updateQuota(node,label,value,fresh||created?newFills:null);});
+    card.querySelector('.updated').textContent=account.checkedAt?(account.error?'缓存 · ':'更新 · ')+date(account.checkedAt):'尚未更新';
+    const error=card.querySelector('.account-error');error.hidden=!account.error;error.textContent=account.error||'';
+    for(const button of card.querySelectorAll('button'))button.disabled=working||state.busy||state.loggingIn;
+  });
+  if(positions)animatePositions(positions);
+  if(newFills.length)requestAnimationFrame(()=>requestAnimationFrame(()=>{for(const fill of newFills)if(fill.isConnected)fill.style.setProperty('--progress',fill.dataset.progress);}));
+  if(!state.accounts.length){const empty=document.createElement('div');empty.className='empty';const title=document.createElement('strong');title.textContent='添加你的第一个账号';empty.append(title,'通过 ChatGPT 登录，开始查看 Codex 额度。');container.append(empty);}
+  $('#count').textContent=state.accounts.length;$('#login-status').hidden=!state.loggingIn;
+  $('#add').disabled=working||state.busy||state.loggingIn;$('#refresh').disabled=working||state.busy||!state.accounts.length;
+  $('#cancel').disabled=working||state.busy;
+  const refreshing=state.refreshing||activeAction==='refresh';$('#refresh').classList.toggle('is-loading',refreshing);
+  $('#refresh-label').textContent=refreshing?'更新中…':'刷新全部';$('#auto-label').textContent=refreshing?'正在更新':'自动更新';
+  $('#proxy-current').textContent=state.proxyMode==='system'?'系统代理 · '+state.proxyUrl:state.proxyMode==='environment'?'环境代理 · '+state.proxyUrl:state.proxyMode==='direct'?'直连':'系统代理不可用';
+  $('#proxy-status').textContent=state.proxyError||(state.proxyMode==='system'?'自动跟随系统 HTTP 代理，分流由代理软件处理。':state.proxyMode==='environment'?'使用环境变量中的 HTTP 代理。':'当前直连；需要代理时请打开系统代理。');
+  if(state.notice&&state.notice.at>noticeSeen){noticeSeen=state.notice.at;showNotice(state.notice.text,state.notice.error);}
+  tick();
+}
+function tick(){
+  for(const node of document.querySelectorAll('[data-reset]')){
+    const seconds=Math.ceil((Number(node.dataset.reset)-Date.now())/1000);
+    if(seconds<=0){node.textContent='等待刷新';continue;}
+    const days=Math.floor(seconds/86400),hours=Math.floor(seconds%86400/3600),minutes=Math.floor(seconds%3600/60),rest=seconds%60;
+    node.textContent=days?`${days}天 ${hours}小时后重置`:`${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(rest).padStart(2,'0')} 后重置`;
+  }
+  $('#next').textContent=state&&!state.refreshing?`· ${Math.max(0,Math.ceil((state.nextRefreshAt-Date.now())/60000))} 分钟后` : '';
+}
+async function update(){
+  clearTimeout(pollTimer);
+  try{const response=await fetch('/api/status');if(!response.ok)throw new Error();state=await response.json();if(draggedId&&!state.accounts.some(account=>account.id===draggedId))cancelDrag();if(!draggedId)render();}
+  catch{showNotice('无法连接本地服务，请确认服务已启动。',true);}
+  if(!document.hidden)pollTimer=setTimeout(update,state&&(state.loggingIn||state.busy)?5000:60000);
+}
+async function action(route,input={}){
+  const popup=route==='login'?window.open('about:blank','_blank'):null;
+  if(route==='reorder'&&state){
+    const account=state.accounts.find(account=>account.id===input.id);
+    if(account){const ordered=state.accounts.filter(item=>item!==account),index=input.beforeId===null?ordered.length:ordered.findIndex(item=>item.id===input.beforeId);if(index>=0){ordered.splice(index,0,account);state.accounts=ordered;}}
+  }
+  working=true;activeAction=route;showNotice('');if(state)render();
+  try{
+    const response=await fetch('/api/'+route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)});
+    const data=await response.json();if(!response.ok)throw new Error(data.error);
+    if(data.url){if(popup)popup.location=data.url;else location.href=data.url;}
+  }catch(error){popup?.close();showNotice(error.message,true);}
+  finally{working=false;activeAction='';await update();}
+}
+function capturePositions(){
+  const positions=new Map([...cards.values()].map(card=>{const rect=card.getBoundingClientRect();return [card,{x:rect.left+scrollX,y:rect.top+scrollY}];}));
+  for(const card of cards.values()){card.sortAnimation?.cancel();card.classList.remove('entering');}
+  return positions;
+}
+function animatePositions(positions){
+  if(document.hidden||reducedMotion.matches)return;
+  const moves=[...positions].filter(([card])=>card.isConnected&&card.dataset.id!==draggedId).map(([card,position])=>{const rect=card.getBoundingClientRect();return [card,position.x-rect.left-scrollX,position.y-rect.top-scrollY];});
+  for(const [card,x,y] of moves)if(Math.hypot(x,y)>1)card.sortAnimation=card.animate([{translate:`${x}px ${y}px`},{translate:'0 0'}],{duration:260,easing:'cubic-bezier(.22,1,.36,1)'});
+}
+function clearDrag(){
+  clearInterval(dragScrollTimer);
+  const handle=cards.get(draggedId)?.querySelector('.drag-handle');
+  if(handle?.hasPointerCapture(dragPointer))handle.releasePointerCapture(dragPointer);
+  const card=cards.get(draggedId);
+  if(card){card.classList.remove('dragging');for(const name of ['left','top','width','height','translate'])card.style.removeProperty(name);}
+  dragSlot?.remove();dragSlot=null;$('#accounts').classList.remove('sorting');document.body.classList.remove('card-sorting');
+  draggedId=null;dragPointer=null;dragMoved=false;
+}
+function cancelDrag(){if(!draggedId)return;pendingPositions=dragMoved?capturePositions():null;clearDrag();if(state)render();}
+function liftCard(){
+  const card=cards.get(draggedId),positions=capturePositions(),rect=card.getBoundingClientRect();
+  dragSlot=document.createElement('div');dragSlot.className='drag-slot';dragSlot.style.height=rect.height+'px';dragSlot.setAttribute('aria-hidden','true');card.before(dragSlot);
+  Object.assign(card.style,{left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px'});
+  card.classList.add('dragging');$('#accounts').classList.add('sorting');document.body.classList.add('card-sorting');
+  animatePositions(positions);
+}
+function moveDraggedCard(){if(dragMoved)cards.get(draggedId).style.translate=`${dragX-dragStartX}px ${dragY-dragStartY}px`;}
+function moveSlot(){
+  if(!dragSlot)return;
+  const container=$('#accounts'),base=container.getBoundingClientRect(),card=cards.get(draggedId);
+  // Use layout positions, so cards animating toward their new slots cannot change the target.
+  const slots=[...container.children].filter(node=>node!==card),center={x:parseFloat(card.style.left)+dragX-dragStartX+card.offsetWidth/2,y:parseFloat(card.style.top)+dragY-dragStartY+card.offsetHeight/2};
+  let nearest=0,distance=Infinity;
+  slots.forEach((node,index)=>{const value=(base.left+node.offsetLeft+node.offsetWidth/2-center.x)**2+(base.top+node.offsetTop+node.offsetHeight/2-center.y)**2;if(value<distance){distance=value;nearest=index;}});
+  const current=slots.indexOf(dragSlot);if(nearest===current)return;
+  const positions=capturePositions();
+  if(nearest<current)slots[nearest].before(dragSlot);else slots[nearest].after(dragSlot);
+  animatePositions(positions);
+}
+$('#accounts').addEventListener('pointerdown',event=>{
+  const card=event.target.closest('.card'),handle=card?.querySelector('.drag-handle');
+  if(!event.target.closest('.account-head')||(event.target.closest('button')&&!event.target.closest('.drag-handle'))||!handle||handle.disabled||event.button!==0||draggedId||working||state?.busy||state?.loggingIn)return;
+  event.preventDefault();handle.focus({preventScroll:true});handle.setPointerCapture(event.pointerId);
+  draggedId=card.dataset.id;dragPointer=event.pointerId;dragX=dragStartX=event.clientX;dragY=dragStartY=event.clientY;
+  dragScrollTimer=setInterval(()=>{
+    if(!dragMoved)return;
+    const step=dragY<60?-18:dragY>innerHeight-60?18:0;
+    if(step){window.scrollBy(0,step);moveSlot();}
+  },50);
+});
+$('#accounts').addEventListener('pointermove',event=>{
+  if(!draggedId||event.pointerId!==dragPointer)return;
+  dragX=event.clientX;dragY=event.clientY;
+  if(!dragMoved&&Math.hypot(dragX-dragStartX,dragY-dragStartY)>6){dragMoved=true;liftCard();}
+  if(dragMoved){moveDraggedCard();moveSlot();}
+});
+$('#accounts').addEventListener('pointerup',event=>{
+  if(!draggedId||event.pointerId!==dragPointer)return;
+  dragX=event.clientX;dragY=event.clientY;
+  if(!dragMoved){clearDrag();return;}
+  moveDraggedCard();moveSlot();
+  const container=$('#accounts'),bounds=container.getBoundingClientRect(),id=draggedId;
+  if(dragX<bounds.left-60||dragX>bounds.right+60||dragY<bounds.top-60||dragY>bounds.bottom+60){cancelDrag();return;}
+  const ids=[...container.children].filter(node=>node!==cards.get(id)).map(node=>node===dragSlot?id:node.dataset.id);
+  pendingPositions=capturePositions();clearDrag();
+  if(ids.every((value,index)=>state.accounts[index]?.id===value)){render();return;}
+  action('reorder',{id,beforeId:ids[ids.indexOf(id)+1]??null});
+});
+$('#accounts').addEventListener('pointercancel',cancelDrag);
+window.addEventListener('blur',cancelDrag);
+window.addEventListener('keydown',event=>{if(event.key==='Escape')cancelDrag();});
+$('#accounts').addEventListener('keydown',async event=>{
+  const handle=event.target.closest('.drag-handle');
+  if(!handle||handle.disabled||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)||draggedId)return;
+  event.preventDefault();const id=handle.closest('.card').dataset.id,ids=state.accounts.map(account=>account.id),index=ids.indexOf(id);
+  const columns=Number(getComputedStyle($('#accounts')).getPropertyValue('--columns'))||1,step={ArrowLeft:-1,ArrowRight:1,ArrowUp:-columns,ArrowDown:columns}[event.key],target=index+step;
+  if(target<0||target>=ids.length)return;
+  ids.splice(index,1);await action('reorder',{id,beforeId:ids[target]??null});
+  cards.get(id)?.querySelector('.drag-handle').focus({preventScroll:true});
+});
+$('#add').onclick=()=>action('login');$('#refresh').onclick=()=>action('refresh');$('#cancel').onclick=()=>action('cancel');
+function visibility(){clearTimeout(pollTimer);clearInterval(tickTimer);cancelDrag();if(document.hidden){for(const card of cards.values())card.sortAnimation?.cancel();}else{update();tickTimer=setInterval(tick,1000);}}
+reducedMotion.addEventListener('change',()=>{if(reducedMotion.matches)for(const card of cards.values())card.sortAnimation?.cancel();});
+document.addEventListener('visibilitychange',visibility);visibility();
+</script>
+</body>
+</html>
