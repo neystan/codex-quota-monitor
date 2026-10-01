@@ -15,11 +15,33 @@
 
 ## 快速开始
 
-1. 安装 **[Node.js 24.14 或更新版本](https://nodejs.org/en/download)**。
+1. 安装 **Node.js 24.14 或更新版本**（命令见下；已有合适版本可跳过）。
 2. **[下载源码 ZIP](https://github.com/neystan/codex-quota-monitor/archive/refs/heads/main.zip)**，解压到固定目录，在该目录打开终端。
 3. 按下面的方法启动，打开 **[监控页面](http://127.0.0.1:17880/)**，点击「添加账号」完成登录。
 
 当前下载的是源码，需要先安装 Node.js。如果需要代理，打开代理软件的「系统代理」即可自动读取，无需手填端口或开启虚拟网卡；[代理详情](docs/USAGE.md#系统代理)。
+
+### 安装运行依赖
+
+**唯一需要额外安装的运行依赖是 Node.js**。网页和登录使用普通浏览器，PowerShell / bash 等工具由系统提供；无需安装 npm 包、Git、Codex CLI 或 Python。
+
+**Windows：**在 PowerShell 执行：
+
+```powershell
+winget install --id OpenJS.NodeJS.LTS --exact --source winget
+```
+
+如果没有 `winget`，直接从 [Node.js 官网](https://nodejs.org/en/download) 下载 Windows 安装包即可。
+
+**macOS：**在终端执行，下载并打开 [官方 Node.js 24 安装包](https://nodejs.org/dist/latest-v24.x/)，然后按安装器提示完成安装。Intel / Apple Silicon 通用，无需 Homebrew：
+
+```sh
+node_pkg=$(curl -fsSL https://nodejs.org/dist/latest-v24.x/SHASUMS256.txt | awk '$2 ~ /\.pkg$/ {print $2; exit}')
+curl -fL "https://nodejs.org/dist/latest-v24.x/$node_pkg" -o "${TMPDIR:-/tmp}/$node_pkg"
+open "${TMPDIR:-/tmp}/$node_pkg"
+```
+
+安装完成后**重新打开终端**，执行 `node --version`，确认版本为 **24.14+**，再启动项目。**无需运行 `npm install`。**
 
 ### Windows
 
