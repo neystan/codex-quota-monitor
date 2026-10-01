@@ -2,9 +2,7 @@
 
 一个轻量的本地 **Codex 多账号额度监控工具**：查看剩余额度和重置时间，支持 Windows / macOS。
 
-![Plus 与 Pro 虚拟账号预览](docs/assets/preview.jpg)
-
-> 截图中的 Plus / Pro 账号与额度均为模拟数据。Pro 示例展示仅返回周额度的布局，实际窗口以接口响应为准。
+![Codex 多账号额度监控界面](docs/assets/preview.jpg)
 
 ## 为什么用它
 
@@ -102,6 +100,6 @@ chmod +x macos.command
 
 详细的账号操作、系统代理、数据保存位置、日志、兼容性和测试说明，都保留在 **[完整使用说明](docs/USAGE.md)**。
 
-非官方工具，使用的非公开接口可能变化。真实 Pro 账号查询仍待验证。不要分享本机的 `accounts.json` 授权文件。
+非官方工具，使用的非公开接口可能变化。不要分享本机的 `accounts.json` 授权文件。
 
 [MIT License](LICENSE)
