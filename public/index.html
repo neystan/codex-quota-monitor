@@ -77,7 +77,7 @@ function activityChart(daily){
   for(let index=0;index<14;index++){
     const day=new Date(start);day.setUTCDate(start.getUTCDate()+index);const key=day.toISOString().slice(0,10),tokens=rows.get(key);
     const bar=element('div','activity-bar'+(tokens==null?' missing':''));bar.style.setProperty('--height',tokens==null?'2px':Math.max(2,tokens/max*48)+'px');
-    bar.title=key+' · '+(tokens==null?'未提供数据':tokens.toLocaleString('zh-CN')+' Token');bar.setAttribute('role','img');bar.setAttribute('aria-label',bar.title);bars.append(bar);
+    bar.title=key+' · '+(tokens==null?'未提供数据':compactFormat.format(tokens)+' Token');bar.setAttribute('role','img');bar.setAttribute('aria-label',bar.title);bars.append(bar);
   }
   const axis=element('div','chart-axis');axis.append(element('span','',dayFormat.format(start)),element('span','',dayFormat.format(last)));
   chart.append(heading,bars,axis);return chart;
