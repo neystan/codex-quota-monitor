@@ -1,5 +1,7 @@
 # Codex Quota Monitor
 
+项目仓库：[neystan/codex-quota-monitor](https://github.com/neystan/codex-quota-monitor)。
+
 极简的本地 Codex 多账号额度监控工具。Node.js + 原生 HTML/CSS/JS，**零 npm 运行依赖**。
 
 通过普通浏览器完成 ChatGPT OAuth，查看套餐、剩余额度、重置倒计时和账号状态。后台每 5 分钟刷新，单个账号失败不影响其他账号。支持拖动排序；宽屏三列，中等宽度两列，手机单列，末行居中。
@@ -106,7 +108,7 @@ npm test
 
 测试使用临时目录、假账号和独立端口，不读取用户真实授权。Windows 本地完整测试为 37 项通过、2 项原生 macOS 检查跳过；模拟 macOS 服务分支的 8 项集成检查通过。macOS 启动控制通过模拟 launchctl 验证，不能代替 Finder、系统代理和登录后自启动的真机验证。
 
-.github/workflows/test.yml 配置 Windows、macOS Apple Silicon 和 Intel 检查，包含真实 scutil、plutil、POSIX 文件权限和 LaunchAgent 启停测试。没有 GUI 登录域时仅跳过 LaunchAgent 原生生命周期测试。工作流尚未在此项目的 GitHub 仓库运行，CI 不进行真实账号登录。
+.github/workflows/test.yml 配置 Windows、macOS Apple Silicon 和 Intel 检查，包含真实 scutil、plutil、POSIX 文件权限和 LaunchAgent 启停测试。没有 GUI 登录域时仅跳过 LaunchAgent 原生生命周期测试。已在真正的 GitHub Mac 运行环境验证：Apple Silicon 与 Intel 均为 39 项通过、0 项跳过；Windows 检查也通过。[查看原生跨平台检查结果](https://github.com/neystan/codex-quota-monitor/actions/runs/36821805810)。CI 不进行真实账号登录，也不能代替 Finder 双击及用户真正退出系统后再登录的操作验证。
 
 当前提供源码运行方式，尚未提供内置 Node.js 的下载即运行安装包。
 
