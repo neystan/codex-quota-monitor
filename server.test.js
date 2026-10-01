@@ -23,7 +23,7 @@ async function waitFor(check) {
   throw new Error('测试状态未按预期完成');
 }
 
-test('多账号 HTTP 服务：隔离失败、后台更新、去重和删除', async t => {
+test('多账号 HTTP 服务：隔离失败、后台更新、去重和删除', { timeout: 30000 }, async t => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'codex-quota-test-'));
   const data = path.join(root, 'CodexQuotaMonitor');
   await fs.mkdir(data);
@@ -78,7 +78,13 @@ test('多账号 HTTP 服务：隔离失败、后台更新、去重和删除', as
   const child = fork(path.join(__dirname, 'server.js'), [], { execArgv: ['--require', preload],
     env: { ...process.env, LOCALAPPDATA: root, HOME: root }, silent: true });
   t.after(async () => {
-    if (child.exitCode === null) { const exited = once(child, 'exit'); child.kill(); await exited; }
+    if (child.exitCode === null) {
+      const exited = once(child, 'exit');
+      // POSIX 的 SIGTERM 会执行服务清理；测试用 IPC 通道也必须关闭，进程才能退出。
+      if (child.connected) child.disconnect();
+      child.kill();
+      await exited;
+    }
     const resolved = path.resolve(root);
     if (path.dirname(resolved) !== path.resolve(os.tmpdir()) || !path.basename(resolved).startsWith('codex-quota-test-'))
       throw new Error('测试清理目录不匹配');
