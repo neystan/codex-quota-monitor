@@ -10,5 +10,5 @@
     "test": "node --test openai.test.js proxy.test.js server.test.js macos.test.js runtime.test.js",
     "check": "node --check server.js && node --check openai.js && node --check proxy.js && node --check macos.js && node --check runtime.js"
   },
-  "files": ["server.js", "openai.js", "proxy.js", "runtime.js", "macos.js", "macos.command", "windows.ps1", "public", "README.md", "LICENSE"]
+  "files": ["server.js", "openai.js", "proxy.js", "runtime.js", "macos.js", "macos.command", "windows.ps1", "public", "docs", "README.md", "LICENSE"]
 }
