@@ -186,6 +186,10 @@ function render(){
     windows.forEach(([label,value],index)=>{let node=quotaGroup.children[index];const created=!node;if(created){node=$('#quota-template').content.firstElementChild.cloneNode(true);quotaGroup.append(node);}updateQuota(node,label,value,fresh||created?newFills:null);});
     card.querySelector('.updated').textContent=account.checkedAt?(account.error?'缓存 · ':'更新 · ')+date(account.checkedAt):'尚未更新';
     const error=card.querySelector('.account-error');error.hidden=!account.error;error.textContent=account.error||'';
+    const detailView=detailViews.get(account.id);
+    if(detailView&&account.details&&JSON.stringify(detailView.data)!==JSON.stringify(account.details)){
+      detailView.data=account.details;renderDetails(account.id);
+    }
     const rewardCount=account.usage?.resetCredits?.availableCount??detailViews.get(account.id)?.data?.rewards?.data?.availableCount??null;
     const badge=card.querySelector('.reward-badge');badge.querySelector('strong').textContent=rewardCount==null?'—':rewardCount;badge.classList.toggle('zero',!rewardCount);
     const applicable=account.usage?.resetCredits?.applicableAvailableCount;badge.title='可用的额度重置奖励'+(applicable!=null?` · 当前适用 ${applicable} 次`:'');

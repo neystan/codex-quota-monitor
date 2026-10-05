@@ -59,7 +59,7 @@ function accountView(account) {
   const view = cache.get(account.id) || {};
   return { id: account.id, email: account.email, status: view.status || 'waiting',
     usage: view.usage || null, checkedAt: view.checkedAt || null,
-    error: view.error || '', retryAt: view.retryAt || null };
+    error: view.error || '', retryAt: view.retryAt || null, details: detailsCache.get(account.id) || null };
 }
 async function renew(account) {
   try {
@@ -94,6 +94,13 @@ async function refreshAccount(account) {
   cache.set(account.id, { ...previous, status: 'refreshing' });
   try {
     const usage = await authorizedRead(account, readUsage);
+    const rewards = detailsCache.get(account.id)?.rewards;
+    const count = usage.resetCredits?.availableCount;
+    if (rewards && count != null && (rewards.data?.availableCount != null && rewards.data.availableCount !== count ||
+      previous.usage?.resetCredits?.availableCount != null && previous.usage.resetCredits.availableCount !== count)) {
+      // 数量变化后无法判断哪一份已使用，先清除旧明细，再读取服务端状态。
+      detailsCache.get(account.id).rewards = { ...rewards, data: null, checkedAt: null, error: '奖励数量已变化，明细待更新' };
+    }
     cache.set(account.id, { status: 'ok', usage, checkedAt: Date.now() });
   } catch (error) {
     const needsLogin = error instanceof OpenAIError && error.code === 'reauth_required';
@@ -101,12 +108,13 @@ async function refreshAccount(account) {
       retryAt: error.status === 429 ? (error.retryAt > Date.now() ? error.retryAt : Date.now() + REFRESH_MS) : 0 });
   }
 }
-async function readDetails(account) {
+async function readDetails(account, { force = false, rewardsOnly = false } = {}) {
   applyProxy();
   const details = detailsCache.get(account.id) || {};
   for (const [key, read] of [['rewards', readResetCredits], ['activity', readActivity]]) {
+    if (rewardsOnly && key !== 'rewards') continue;
     const previous = details[key];
-    if (previous && (Date.now() < previous.retryAt || (!previous.error && Date.now() < previous.checkedAt + DETAILS_MS))) continue;
+    if (previous && (Date.now() < previous.retryAt || (!force && !previous.error && Date.now() < previous.checkedAt + DETAILS_MS))) continue;
     try {
       const data = await authorizedRead(account, read);
       details[key] = { data, checkedAt: Date.now(), error: '', retryAt: 0 };
@@ -124,11 +132,15 @@ async function readDetails(account) {
   detailsCache.set(account.id, details);
   return details;
 }
-function refreshAll() {
+function refreshAll({ forceDetails = false } = {}) {
   if (busy || refreshPromise) return refreshPromise || Promise.resolve();
   refreshPromise = (async () => {
     applyProxy();
-    for (const account of state.accounts) await refreshAccount(account);
+    for (const account of state.accounts) {
+      await refreshAccount(account);
+      if (detailsCache.has(account.id) && cache.get(account.id)?.status !== 'needs_login')
+        await readDetails(account, { force: forceDetails, rewardsOnly: !forceDetails });
+    }
   })().finally(() => { refreshPromise = null; });
   return refreshPromise;
 }
@@ -249,7 +261,7 @@ const server = http.createServer(async (request, response) => {
       if (url.pathname === '/api/refresh') {
         busy = false;
         holdsBusy = false;
-        await refreshAll();
+        await refreshAll({ forceDetails: true });
         return reply(response, { ok: true });
       }
     }
